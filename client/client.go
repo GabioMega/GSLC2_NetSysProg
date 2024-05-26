@@ -12,15 +12,6 @@ import (
 	"net/http"
 	"os"
 	"time"
-	// "bufio"
-	// "bytes"
-	// "context"
-	// "encoding/json"
-	// "fmt"
-	// "io"
-	// "net/http"
-	// "os"
-	// "time"
 )
 
 func main() {
