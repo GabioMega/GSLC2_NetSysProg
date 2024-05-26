@@ -4,12 +4,23 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"time"
+	// "bufio"
+	// "bytes"
+	// "context"
+	// "encoding/json"
+	// "fmt"
+	// "io"
+	// "net/http"
+	// "os"
+	// "time"
 )
 
 func main() {
@@ -33,14 +44,35 @@ func main() {
 		}
 	}
 }
+
+func loadTLSConfig() (*tls.Config, error) {
+	certPool := x509.NewCertPool()
+	caCert, err := os.ReadFile("../cert.pem")
+	if err != nil {
+		return nil, err
+	}
+	certPool.AppendCertsFromPEM(caCert)
+	return &tls.Config{
+		RootCAs: certPool,
+	}, nil
+}
+
 func receiveData() {
-	cx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-	req, err := http.NewRequestWithContext(cx, "GET", "http://localhost:9876", nil)
+	tlsConfig, err := loadTLSConfig()
 	if err != nil {
 		return
 	}
-	resp, err := http.DefaultClient.Do(req)
+	cx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	tr := &http.Transport{
+		TLSClientConfig: tlsConfig,
+	}
+	client := &http.Client{Transport: tr}
+	req, err := http.NewRequestWithContext(cx, "GET", "https://localhost:9876", nil)
+	if err != nil {
+		return
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return
 	}
@@ -51,6 +83,7 @@ func receiveData() {
 	}
 	fmt.Println("Data from server: ", string(data))
 }
+
 func sendData() {
 	data := map[string]string{
 		"Name": "Test",
@@ -60,14 +93,22 @@ func sendData() {
 	if err != nil {
 		return
 	}
+	tlsConfig, err := loadTLSConfig()
+	if err != nil {
+		return
+	}
 	cx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	req, err := http.NewRequestWithContext(cx, "POST", "http://localhost:9876/post", bytes.NewBuffer(jsonData))
+	tr := &http.Transport{
+		TLSClientConfig: tlsConfig,
+	}
+	client := &http.Client{Transport: tr}
+	req, err := http.NewRequestWithContext(cx, "POST", "https://localhost:9876/post", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return
 	}

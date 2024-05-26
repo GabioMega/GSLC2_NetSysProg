@@ -1,10 +1,12 @@
 package main
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 )
 
 func main() {
@@ -28,9 +30,13 @@ func main() {
 	server := http.Server{
 		Addr:    "localhost:9876",
 		Handler: mux,
+		TLSConfig: &tls.Config{
+			MinVersion: tls.VersionTLS12,
+		},
 	}
-	err := server.ListenAndServe()
-	if err != nil {
+	err := server.ListenAndServeTLS("../cert.pem", "../key.pem")
+	if err != nil && !strings.Contains(err.Error(), "use of closed network connection") {
+		fmt.Println(err)
 		return
 	}
 }
